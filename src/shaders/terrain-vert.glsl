@@ -1,6 +1,5 @@
 #version 300 es
 
-
 uniform mat4 u_Model;
 uniform mat4 u_ModelInvTr;
 uniform mat4 u_ViewProj;
@@ -16,6 +15,14 @@ out vec4 fs_Col;
 
 out float fs_Sine;
 
+out vec4 fs_LightVec;       // The direction in which our virtual light lies, relative to each vertex. This is implicitly passed to the fragment shader.
+
+const vec4 lightPos = vec4(5, 10, 3, 1); //The position of our virtual light, which is used to compute the shading of
+
+out float fs_Height;
+
+out float fs_Moisture;
+
 float random1( vec2 p , vec2 seed) {
   return fract(sin(dot(p + seed, vec2(127.1, 311.7))) * 43758.5453);
 }
@@ -28,11 +35,74 @@ vec2 random2( vec2 p , vec2 seed) {
   return fract(sin(vec2(dot(p + seed, vec2(311.7, 127.1)), dot(p + seed, vec2(269.5, 183.3)))) * 85734.3545);
 }
 
+float interpNoise2D(float x, float y) {
+    float intX = floor(x);
+    float fractX = fract(x);
+    float intY = floor(y);
+    float fractY = fract(y);
+
+    float v1 = random1(vec2(intX, intY), vec2(311.7, 127.1));
+    float v2 = random1(vec2(intX + 1.0f, intY), vec2(311.7, 127.1));
+    float v3 = random1(vec2(intX, intY + 1.0f), vec2(311.7, 127.1));
+    float v4 = random1(vec2(intX + 1.0, intY + 1.0), vec2(311.7, 127.1));
+
+    float i1 = mix(v1, v2, fractX);
+    float i2 = mix(v3, v4, fractX);
+
+    return mix(i1, i2, fractY);
+}
+
+
+float generateMoisture(float x, float y) {
+  // noise one - moisture
+    float total = 0.0;
+    float persistence = 0.4f;
+    float octaves = 14.0;
+
+    for (float i = 0.0; i < octaves; i = i + 1.0) {
+        float freq = pow(2.0f, i);
+        float amp = pow(persistence, i);
+        total += interpNoise2D(x * freq, y * freq);
+    }
+    return total;
+}
+
+float generateHeight(float x, float y) {
+  // noise two - elevation
+    float total = 0.0;
+    float persistence = 0.5f;
+    float octaves = 10.0;
+
+    for (float i = 0.0; i < octaves; i = i + 1.0) {
+        float freq = pow(2.0f, i);
+        float amp = pow(persistence, i);
+        total += (1.0 / freq) * interpNoise2D(x * freq, y * freq);
+    }
+    return total;
+}
+
 void main()
 {
-  fs_Pos = vs_Pos.xyz;
-  fs_Sine = (sin((vs_Pos.x + u_PlanePos.x) * 3.14159 * 0.1) + cos((vs_Pos.z + u_PlanePos.y) * 3.14159 * 0.1));
-  vec4 modelposition = vec4(vs_Pos.x, fs_Sine * 2.0, vs_Pos.z, 1.0);
+  float elevation = generateHeight((vs_Pos.x + u_PlanePos.x) / 8.0, (vs_Pos.z + u_PlanePos.y) / 8.0);
+  float moisure = generateMoisture((vs_Pos.x + u_PlanePos.x) / 0.5, (vs_Pos.z + u_PlanePos.y) / 0.5);
+  float exp = 4.5;
+  elevation = pow(elevation, exp);
+  if (elevation <= 0.7)
+  {
+    elevation = 0.7;
+  }
+  moisure = pow(moisure, 2.0);
+  fs_Moisture = moisure;
+  fs_Height = elevation;
+  fs_Pos = vec3(vs_Pos.x, elevation, vs_Pos.z);
+
+//  fs_Sine = (sin((vs_Pos.x + u_PlanePos.x) * 3.14159 * 0.1) + cos((vs_Pos.z + u_PlanePos.y) * 3.14159 * 0.1));
+  //fs_Sine = sin(1.0);
+  mat3 invTranspose = mat3(u_ModelInvTr);
+  fs_Nor = vec4(invTranspose * vec3(vs_Nor), 0);
+
+  vec4 modelposition = vec4(vs_Pos.x, elevation, vs_Pos.z, 1.0);
   modelposition = u_Model * modelposition;
+  fs_LightVec = lightPos - modelposition;
   gl_Position = u_ViewProj * modelposition;
 }
