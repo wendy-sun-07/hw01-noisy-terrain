@@ -4,6 +4,7 @@ uniform mat4 u_Model;
 uniform mat4 u_ModelInvTr;
 uniform mat4 u_ViewProj;
 uniform vec2 u_PlanePos; // Our location in the virtual world displayed by the plane
+uniform float u_Density;
 
 in vec4 vs_Pos;
 in vec4 vs_Nor;
@@ -56,8 +57,8 @@ float interpNoise2D(float x, float y) {
 float generateMoisture(float x, float y) {
   // noise one - moisture
     float total = 0.0;
-    float persistence = 0.4f;
-    float octaves = 14.0;
+    float persistence = 0.1f;
+    float octaves = 20.0;
 
     for (float i = 0.0; i < octaves; i = i + 1.0) {
         float freq = pow(2.0f, i);
@@ -83,15 +84,13 @@ float generateHeight(float x, float y) {
 
 void main()
 {
-  float elevation = generateHeight((vs_Pos.x + u_PlanePos.x) / 8.0, (vs_Pos.z + u_PlanePos.y) / 8.0);
-  float moisure = generateMoisture((vs_Pos.x + u_PlanePos.x) / 0.5, (vs_Pos.z + u_PlanePos.y) / 0.5);
-  float exp = 4.5;
+  float elevation = generateHeight((vs_Pos.x + u_PlanePos.x) / (11.0 - u_Density),
+                                  (vs_Pos.z + u_PlanePos.y) / (11.0 - u_Density));
+  float moisure = generateMoisture((vs_Pos.x + u_PlanePos.x) / 1.2, (vs_Pos.z + u_PlanePos.y) / 1.2);
+  float exp = 3.6;
   elevation = pow(elevation, exp);
-  if (elevation <= 0.7)
-  {
-    elevation = 0.7;
-  }
-  moisure = pow(moisure, 2.0);
+
+  moisure = pow(moisure, 0.5);
   fs_Moisture = moisure;
   fs_Height = elevation;
   fs_Pos = vec3(vs_Pos.x, elevation, vs_Pos.z);

@@ -10,10 +10,6 @@ import ShaderProgram, {Shader} from './rendering/gl/ShaderProgram';
 
 // Define an object with application parameters and button callbacks
 // This will be referred to by dat.GUI's functions that add GUI elements.
-const controls = {
-  tesselations: 5,
-  'Load Scene': loadScene, // A function pointer, essentially
-};
 
 let square: Square;
 let plane : Plane;
@@ -22,6 +18,14 @@ let aPressed: boolean;
 let sPressed: boolean;
 let dPressed: boolean;
 let planePos: vec2;
+
+const controls = {
+  day_night_color: 0,
+  density: 0.0,
+};
+
+let prevDayNight : number = 0;
+let prevDensity : number = 0.0;
 
 function loadScene() {
   square = new Square(vec3.fromValues(0, 0, 0));
@@ -37,6 +41,12 @@ function loadScene() {
 }
 
 function main() {
+
+  // Add controls to the gui
+  const gui = new DAT.GUI();
+  gui.add(controls, 'density',  0, 10).step(1);
+  gui.add(controls, 'day_night_color', 0, 8).step(1);
+
   window.addEventListener('keypress', function (e) {
     // console.log(e.key);
     switch(e.key) {
@@ -79,9 +89,6 @@ function main() {
   stats.domElement.style.left = '0px';
   stats.domElement.style.top = '0px';
   document.body.appendChild(stats.domElement);
-
-  // Add controls to the gui
-  const gui = new DAT.GUI();
 
   // get canvas and webgl context
   const canvas = <HTMLCanvasElement> document.getElementById('canvas');
@@ -139,12 +146,22 @@ function main() {
     gl.viewport(0, 0, window.innerWidth, window.innerHeight);
     renderer.clear();
     processKeyPresses();
+    if(controls.day_night_color != prevDayNight)
+    {
+      prevDayNight = controls.day_night_color;
+    }
+
+    if(controls.density != prevDensity)
+    {
+      prevDensity = controls.density;
+    }
+
     renderer.render(camera, lambert, [
       plane,
-    ]);
+    ], prevDayNight, prevDensity);
     renderer.render(camera, flat, [
       square,
-    ]);
+    ], prevDayNight, prevDensity);
     stats.end();
 
     // Tell the browser to call `tick` again whenever it renders a new frame
