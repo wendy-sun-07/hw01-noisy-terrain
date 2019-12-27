@@ -8,7 +8,7 @@ The source that I found the most helpful is using [Making Maps with noise functi
 
 ## Demo
 
-https://wentings.github.io/hw01-noisy-terrain/
+https://wendy-sun-07.github.io/hw01-noisy-terrain/
 
 ![Screenshot](screenshot.png)
 
